@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interactive 3D Gaussian Pillbox — Infinite Charged Sheet</title>
+<style>
+  :root { color-scheme: dark; --bg:#07111f; --panel:#0d1b2c; --text:#e8f1fb; --muted:#9bb0c8; --cyan:#55d6e8; --green:#50e0b0; --red:#ff6878; --gold:#ffd166; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:radial-gradient(ellipse at 48% 0%,#122a42 0%,var(--bg) 64%); color:var(--text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+  .wrap { max-width:1360px; margin:0 auto; padding:25px 22px 22px; }
+  header { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .eyebrow { color:var(--cyan); font-weight:750; font-size:11px; letter-spacing:.19em; text-transform:uppercase; margin-bottom:8px; }
+  h1 { font-size:clamp(24px,3vw,37px); line-height:1.08; letter-spacing:-.035em; margin:0; }
+  .sub { color:var(--muted); margin:9px 0 0; font-size:14px; line-height:1.55; max-width:790px; }
+  .status { display:flex; align-items:center; gap:8px; color:#bfd0e3; font-size:12px; border:1px solid #263d55; background:#0b1b2b; border-radius:999px; padding:9px 12px; }
+  .dot { width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px #50e0b077; }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 302px; gap:16px; align-items:stretch; }
+  .stage { min-width:0; background:linear-gradient(150deg,#091a2b,#06111e 82%); border:1px solid #203a53; border-radius:18px; overflow:hidden; box-shadow:0 18px 48px #0003; }
+  .stage-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid #20354b; background:#0b1a2a; flex-wrap:wrap; }
+  .stage-title { color:#dbeaf7; font-size:13px; font-weight:700; }
+  .mode-caption { font-size:12px; color:#9bb0c8; }
+  .canvas-wrap { position:relative; height:min(72vh,700px); min-height:450px; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; cursor:grab; outline:none; }
+  canvas:active { cursor:grabbing; }
+  .canvas-hint { position:absolute; left:15px; bottom:13px; color:#91a9c1; font-size:11px; background:#061321d9; border:1px solid #21394e; padding:8px 10px; border-radius:9px; pointer-events:none; backdrop-filter:blur(4px); }
+  .view-tag { position:absolute; right:14px; top:14px; color:#d3e4f4; font-size:11px; letter-spacing:.04em; background:#071522dd; border:1px solid #29445c; padding:8px 10px; border-radius:9px; pointer-events:none; }
+  .side { display:flex; flex-direction:column; gap:12px; }
+  .card { border:1px solid #203a53; border-radius:16px; background:linear-gradient(145deg,#0e2033,#0a1827); padding:16px; }
+  .card h2 { margin:0 0 13px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:#c6d7e8; }
+  .checklist { display:grid; gap:12px; }
+  .check { display:flex; align-items:center; gap:10px; color:#dce8f4; font-size:13px; cursor:pointer; }
+  .check input { appearance:none; width:16px;height:16px; margin:0; border:1px solid #54708a; border-radius:4px; background:#071523; display:grid; place-content:center; flex:0 0 auto; }
+  .check input:checked { background:#51dcb1; border-color:#51dcb1; }
+  .check input:checked::after { content:'✓'; color:#05231d; font-size:12px; font-weight:900; }
+  .swatch { width:9px;height:9px;border-radius:50%;display:inline-block;margin-left:auto; }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px; }
+  button { font:inherit; cursor:pointer; }
+  .action { border:1px solid #2a445c; background:#12283c; color:#d6e6f4; border-radius:9px; padding:10px 8px; font-size:12px; font-weight:650; }
+  .action:hover { background:#1a354d; }
+  .action.primary { background:#173a42; border-color:#2d6970; color:#91f0d3; }
+  .legend { display:grid; gap:12px; }
+  .legend-row { display:flex; align-items:center; gap:10px; font-size:12px; color:#bdcfe0; line-height:1.35; }
+  .line-swatch { width:28px; height:0; border-top:3px solid; border-radius:5px; flex:0 0 auto; }
+  .mesh-swatch { width:16px;height:16px;border:1.5px solid var(--green);border-radius:3px;flex:0 0 auto; box-shadow:inset 0 0 0 3px #50e0b022; }
+  .axis-swatch { width:4px;height:19px;background:#55d6e8;border-radius:4px;flex:0 0 auto;box-shadow:0 0 9px #55d6e866; margin:0 6px; }
+  .sheet-swatch { width:24px;height:14px;border:1.5px solid var(--cyan);background:#55d6e81a;transform:skewX(-22deg);flex:0 0 auto;margin:0 3px; }
+  .formula { font-family:Georgia,"Times New Roman",serif; color:#f2f7fc; font-size:16px; margin:9px 0 6px; line-height:1.45; }
+  .formula small { display:block; font-family:inherit; font-size:12px; line-height:1.5; color:#9db2c7; margin-top:7px; }
+  .note { color:#9db2c7; font-size:11px; line-height:1.6; margin:12px 0 0; }
+  .pill { display:inline-block; border:1px solid #316b61; color:#83eacd; background:#0c2a2b; padding:5px 8px; border-radius:7px; font-size:12px; font-weight:750; margin-top:4px; }
+  .polarity { display:grid; grid-template-columns:1fr 1fr; gap:7px; margin-top:14px; }
+  .polarity button { border:1px solid #2a445c; background:#0a1928; color:#9bb0c8; border-radius:8px; padding:8px; font-size:12px; font-weight:700; }
+  .polarity button.active { color:#ffe6e9; border-color:#98515b; background:#3a202a; }
+  footer { color:#7e96ae; font-size:11px; padding:16px 2px 0; line-height:1.6; }
+  @media (max-width:940px) { .layout { grid-template-columns:1fr; } .side { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .canvas-wrap { height:60vh; min-height:400px; } }
+  @media (max-width:580px) { .wrap {padding:18px 10px;} .side {grid-template-columns:1fr;} .canvas-wrap {height:55vh;min-height:350px;} .stage-head {align-items:flex-start;} .mode-caption {width:100%;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Electrostatics · Interactive 3D</div>
+      <h1>Gaussian pillbox crossing an infinite non-conducting charged sheet</h1>
+      <p class="sub">Drag to rotate the pillbox. The ideal infinite non-conducting sheet lies in its mid-plane; for positive surface charge, the electric field points normally away from the sheet on both sides.</p>
+    </div>
+    <div class="status"><span class="dot"></span> Drag to rotate · Scroll to zoom</div>
+  </header>
+  <main class="layout">
+    <section class="stage" aria-label="Interactive 3D scene">
+      <div class="stage-head">
+        <div class="stage-title">Gaussian pillbox (cylinder crossing sheet)</div>
+        <div class="mode-caption" id="modeCaption">Pillbox radius r = 1.15 · surface density σ &gt; 0</div>
+      </div>
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="scene" tabindex="0" aria-label="Rotatable 3D illustration of a Gaussian pillbox crossing an infinite non-conducting charged sheet. Drag to rotate and use the mouse wheel to zoom."></canvas>
+        <div class="view-tag">INFINITE CHARGED SHEET</div>
+        <div class="canvas-hint">↔ Drag to rotate &nbsp; · &nbsp; Scroll to zoom &nbsp; · &nbsp; Double-click to reset</div>
+      </div>
+    </section>
+    <aside class="side">
+      <section class="card">
+        <h2>Display controls</h2>
+        <div class="checklist">
+          <label class="check"><input type="checkbox" id="fieldToggle" checked><span>Electric field lines</span><span class="swatch" style="background:var(--red)"></span></label>
+          <label class="check"><input type="checkbox" id="gaussToggle" checked><span>Gaussian pillbox</span><span class="swatch" style="background:var(--green)"></span></label>
+          <label class="check"><input type="checkbox" id="normalToggle" checked><span>Normal area vector dA</span><span class="swatch" style="background:var(--gold)"></span></label>
+          <label class="check"><input type="checkbox" id="chargeToggle" checked><span>Charged sheet and markers</span><span class="swatch" style="background:var(--cyan)"></span></label>
+          <label class="check"><input type="checkbox" id="capsToggle" checked><span>End caps</span><span class="swatch" style="background:#50e0b0"></span></label>
+        </div>
+        <div class="polarity" aria-label="Sheet charge polarity">
+          <button id="positiveBtn" class="active" aria-pressed="true">+σ · outward E</button>
+          <button id="negativeBtn" aria-pressed="false">−σ · inward E</button>
+        </div>
+        <div class="controls">
+          <button class="action primary" id="spinBtn">▶ Auto-rotate</button>
+          <button class="action" id="resetBtn">Reset view</button>
+          <button class="action" id="zoomInBtn">＋ Zoom in</button>
+          <button class="action" id="zoomOutBtn">－ Zoom out</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Visual key</h2>
+        <div class="legend">
+          <div class="legend-row"><span class="sheet-swatch"></span><span>Infinite non-conducting sheet; surface charge density σ</span></div>
+          <div class="legend-row"><span class="mesh-swatch"></span><span>Gaussian pillbox (cylindrical surface)</span></div>
+          <div class="legend-row"><span class="line-swatch" style="border-color:var(--red)"></span><span>Electric field E — perpendicular to the sheet</span></div>
+          <div class="legend-row"><span class="line-swatch" style="border-color:var(--gold)"></span><span>dA vectors — outward normals on caps and curved side</span></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Gauss’s law</h2>
+        <div class="formula">∮ E · dA = Q<sub>enc</sub> / ε₀</div>
+        <div class="formula">E = |σ| / (2ε₀)
+          <small>For an ideal infinite uniformly charged non-conducting sheet, the field magnitude is the same on both sides.</small>
+        </div>
+        <div class="pill">2EA = |σ|A/ε₀</div>
+        <p class="note">Flux passes through the two flat end caps because their area vectors are parallel to E (for +σ). On the curved side, dA is perpendicular to E, so its flux is zero. The pillbox encloses charge Q<sub>enc</sub> = σA.</p>
+      </section>
+    </aside>
+  </main>
+  <footer>Schematic model: an ideal infinite uniformly charged non-conducting plane, shown as a finite patch for visualization, with a cylindrical Gaussian pillbox crossing it. The rendering is drawn locally in this file and does not require an internet connection.</footer>
+</div>
+<script>
+(() => {
+  const canvas = document.getElementById('scene');
+  const ctx = canvas.getContext('2d');
+  const wrap = document.getElementById('canvasWrap');
+  const fieldToggle = document.getElementById('fieldToggle');
+  const gaussToggle = document.getElementById('gaussToggle');
+  const normalToggle = document.getElementById('normalToggle');
+  const chargeToggle = document.getElementById('chargeToggle');
+  const capsToggle = document.getElementById('capsToggle');
+  const spinBtn = document.getElementById('spinBtn');
+  const positiveBtn = document.getElementById('positiveBtn');
+  const negativeBtn = document.getElementById('negativeBtn');
+  const modeCaption = document.getElementById('modeCaption');
+
+  let yaw = -0.62, pitch = 0.24, zoom = 1.0;
+  let autoRotate = false, dragging = false, lastX = 0, lastY = 0;
+  let width = 900, height = 600, dpr = 1;
+  let positive = true;
+  const radius = 1.15, halfLength = 1.08, sheetExtent = 2.45;
+  const fieldColor = '#ff6878', gaussColor = '#50e0b0', normalColor = '#ffd166', sheetColor = '#55d6e8';
+  const add = (a,b) => [a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+  const mul = (v,s) => [v[0]*s,v[1]*s,v[2]*s];
+  function resize() {
+    const rect=wrap.getBoundingClientRect(); width=Math.max(320,rect.width); height=Math.max(320,rect.height);
+    dpr=Math.min(window.devicePixelRatio||1,2); canvas.width=Math.round(width*dpr); canvas.height=Math.round(height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0); draw();
+  }
+  function rotate3(p) {
+    const cy=Math.cos(yaw), sy=Math.sin(yaw), cp=Math.cos(pitch), sp=Math.sin(pitch);
+    const x=p[0]*cy+p[2]*sy, z1=-p[0]*sy+p[2]*cy;
+    const y=p[1]*cp-z1*sp, z=p[1]*sp+z1*cp;
+    return [x,y,z];
+  }
+  function project(p) {
+    const v=rotate3(p), f=6.6, perspective=f/(f-v[2]);
+    const unit=Math.min(width,height)*0.205*zoom;
+    return {x:width*0.49+v[0]*unit*perspective,y:height*0.505-v[1]*unit*perspective,z:v[2],scale:unit*perspective};
+  }
+  function drawBackground() {
+    const g=ctx.createRadialGradient(width*.48,height*.44,20,width*.49,height*.5,Math.max(width,height)*.76);
+    g.addColorStop(0,'#112b43'); g.addColorStop(.55,'#091a2a'); g.addColorStop(1,'#06111d'); ctx.fillStyle=g; ctx.fillRect(0,0,width,height);
+    ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle='#284158';ctx.lineWidth=1;const by=height*.83;
+    for(let i=-7;i<=7;i++){const x=width*.49+i*width*.07;ctx.beginPath();ctx.moveTo(width*.49+(x-width*.49)*.22,height*.45);ctx.lineTo(x,by);ctx.stroke();}
+    for(let j=1;j<=6;j++){const t=j/6,y=height*.45+(by-height*.45)*t*t;ctx.beginPath();ctx.moveTo(width*.05,y);ctx.lineTo(width*.94,y);ctx.stroke();}ctx.restore();
+  }
+  function drawLine3D(a,b,color,alpha=1,lw=1.5,dash=[]) {
+    const A=project(a),B=project(b);ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash(dash);ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore();
+  }
+  function drawSegmentByDepth(a,b,color,frontAlpha,backAlpha,lw=1.2) {
+    const A=project(a),B=project(b),z=(A.z+B.z)/2;ctx.save();ctx.globalAlpha=z>=0?frontAlpha:backAlpha;ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();ctx.restore();
+  }
+  function arrow2D(from,to,color,head=8,lw=2.0) {
+    const dx=to.x-from.x,dy=to.y-from.y,len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+    ctx.save();ctx.strokeStyle=color;ctx.fillStyle=color;ctx.lineWidth=lw;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
+    const bx=to.x-ux*head,by=to.y-uy*head,px=-uy*head*.48,py=ux*head*.48;ctx.beginPath();ctx.moveTo(to.x,to.y);ctx.lineTo(bx+px,by+py);ctx.lineTo(bx-px,by-py);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  function circlePoint(theta,y,r=radius){return [r*Math.cos(theta),y,r*Math.sin(theta)];}
+  function fillPolygon3D(points,color,alpha) {
+    const q=points.map(project);ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(q[0].x,q[0].y);for(let i=1;i<q.length;i++)ctx.lineTo(q[i].x,q[i].y);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  function drawSheet() {
+    if(!chargeToggle.checked)return;
+    const s=sheetExtent;
+    // Only a finite patch is drawn to suggest the ideal infinite sheet.
+    fillPolygon3D([[-s,0,-s],[s,0,-s],[s,0,s],[-s,0,s]],'#2b9fc4',.105);
+    const step=.5;
+    for(let v=-s;v<=s+.001;v+=step){
+      drawSegmentByDepth([-s,0,v],[s,0,v],sheetColor,.5,.38,.75);
+      drawSegmentByDepth([v,0,-s],[v,0,s],sheetColor,.5,.38,.75);
+    }
+    // Dashed perimeter stresses that the patch shown is a visual window, not a finite sheet.
+    const corners=[[-s,0,-s],[s,0,-s],[s,0,s],[-s,0,s]];
+    for(let i=0;i<4;i++)drawLine3D(corners[i],corners[(i+1)%4],sheetColor,.56,1,[5,5]);
+    const label=project([-2.12,.03,2.0]);
+    ctx.save();ctx.font='italic 14px Georgia,serif';ctx.fillStyle='#a4effb';ctx.shadowColor='#06111d';ctx.shadowBlur=5;ctx.fillText('infinite sheet',label.x-42,label.y-7);ctx.restore();
+  }
+  function drawFieldLines() {
+    if(!fieldToggle.checked)return;
+    // Uniform field: all field lines are perpendicular to the sheet, on both sides.
+    const coords=[-1.74,-1.16,-.58,0,.58,1.16,1.74];
+    for(const x of coords)for(const z of coords){
+      if(Math.hypot(x,z)>2.18)continue;
+      const upperA=positive?0.12:1.93, upperB=positive?1.93:0.12;
+      const lowerA=positive?-0.12:-1.93, lowerB=positive?-1.93:-0.12;
+      drawLine3D([x,upperA,z],[x,upperB,z],fieldColor,.62,1.35);
+      drawLine3D([x,lowerA,z],[x,lowerB,z],fieldColor,.62,1.35);
+      const ua=project([x,positive?.83:1.12,z]), ub=project([x,positive?1.14:.83,z]);
+      const la=project([x,positive?-.83:-1.12,z]), lb=project([x,positive?-1.14:-.83,z]);
+      arrow2D(ua,ub,fieldColor,5.7,1.45); arrow2D(la,lb,fieldColor,5.7,1.45);
+    }
+    const top=project([1.8,1.58,.35]), bot=project([1.8,-1.58,.35]);
+    ctx.save();ctx.font='italic 16px Georgia,serif';ctx.fillStyle='#ff9aa5';ctx.shadowColor='#07111f';ctx.shadowBlur=5;ctx.fillText('E',top.x+7,top.y-7);ctx.fillText('E',bot.x+7,bot.y+14);ctx.restore();
+  }
+  function drawCaps() {
+    if(!capsToggle.checked||!gaussToggle.checked)return;
+    const n=80;
+    for(const y of [-halfLength,halfLength]) {
+      const pts=[];for(let i=0;i<n;i++)pts.push(circlePoint(2*Math.PI*i/n,y));
+      fillPolygon3D(pts,gaussColor,.085);
+    }
+  }
+  function drawGaussianPillbox() {
+    if(!gaussToggle.checked)return;
+    drawCaps();
+    const n=56,strips=[];
+    for(let i=0;i<n;i++){
+      const t0=2*Math.PI*i/n,t1=2*Math.PI*(i+1)/n;
+      const points=[circlePoint(t0,-halfLength),circlePoint(t1,-halfLength),circlePoint(t1,halfLength),circlePoint(t0,halfLength)];
+      const zs=points.map(p=>rotate3(p)[2]);strips.push({points,z:zs.reduce((a,b)=>a+b,0)/zs.length});
+    }
+    strips.sort((a,b)=>a.z-b.z).forEach(s=>fillPolygon3D(s.points,gaussColor,.027));
+    // Circular rims at both caps, plus a waist ring where the charged sheet crosses.
+    for(const y of [-halfLength,0,halfLength]){
+      let prev=circlePoint(0,y);const nseg=96;
+      for(let i=1;i<=nseg;i++){const cur=circlePoint(2*Math.PI*i/nseg,y);drawSegmentByDepth(prev,cur,gaussColor,.98,.34,(y===0?1.1:1.85));prev=cur;}
+    }
+    // Axial generators outline the curved side wall.
+    for(let j=0;j<24;j++){const th=2*Math.PI*j/24;drawSegmentByDepth(circlePoint(th,-halfLength),circlePoint(th,halfLength),gaussColor,.78,.24,1.0);}
+    // A subtle patch marks a local area on the curved side, whose normal is radial.
+    if(normalToggle.checked){
+      const th0=.56,y0=.05,dt=.13,dy=.24;
+      const pts=[circlePoint(th0-dt,y0-dy),circlePoint(th0+dt,y0-dy),circlePoint(th0+dt,y0+dy),circlePoint(th0-dt,y0+dy)];
+      fillPolygon3D(pts,'#ffd166',.20);
+      for(let i=0;i<4;i++)drawLine3D(pts[i],pts[(i+1)%4],normalColor,.95,1.25);
+    }
+  }
+  function drawSheetMarkers() {
+    if(!chargeToggle.checked)return;
+    for(let x=-2.0;x<=2.001;x+=.5)for(let z=-2.0;z<=2.001;z+=.5){
+      if(Math.hypot(x,z)<.2)continue;
+      const p=project([x,.018,z]);
+      ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 13px system-ui';ctx.fillStyle=positive?'#d4f9ff':'#ffd5dc';ctx.shadowColor=positive?sheetColor:fieldColor;ctx.shadowBlur=7;ctx.fillText(positive?'+':'−',p.x,p.y);ctx.restore();
+    }
+    const label=project([1.9,.03,1.4]);ctx.save();ctx.font='italic 15px Georgia,serif';ctx.fillStyle=sheetColor;ctx.shadowColor='#06111d';ctx.shadowBlur=6;ctx.fillText(positive?'σ > 0':'σ < 0',label.x+4,label.y-8);ctx.restore();
+  }
+  function drawNormalVectors() {
+    if(!normalToggle.checked||!gaussToggle.checked)return;
+    // End-cap area normals point outward from the Gaussian pillbox (independent of charge sign).
+    if(capsToggle.checked){
+      const topBase=[.18,halfLength,.18],topTip=[.18,halfLength+.52,.18];
+      const botBase=[-.18,-halfLength,-.18],botTip=[-.18,-halfLength-.52,-.18];
+      const TA=project(topBase),TB=project(topTip),BA=project(botBase),BB=project(botTip);
+      arrow2D(TA,TB,normalColor,10,2.8);arrow2D(BA,BB,normalColor,10,2.8);
+      ctx.save();ctx.font='italic 15px Georgia,serif';ctx.fillStyle=normalColor;ctx.shadowColor='#06111d';ctx.shadowBlur=6;ctx.fillText('dA cap',TB.x+6,TB.y-5);ctx.fillText('dA cap',BB.x+6,BB.y+13);ctx.restore();
+    }
+    // Normal to the curved side wall is radial and perpendicular to E.
+    const th=.56,y=.05,dir=[Math.cos(th),0,Math.sin(th)],anchor=circlePoint(th,y),tip=add(anchor,mul(dir,.63));
+    const A=project(anchor),B=project(tip);arrow2D(A,B,normalColor,10,2.7);
+    ctx.save();ctx.font='italic 15px Georgia,serif';ctx.fillStyle=normalColor;ctx.shadowColor='#06111d';ctx.shadowBlur=6;ctx.fillText('dA side',B.x+7,B.y-7);ctx.restore();
+  }
+  function drawAnnotations() {
+    const x=width*.49,y=height*.91;ctx.save();ctx.textAlign='center';ctx.fillStyle='#8fa8c1';ctx.font='11px system-ui';ctx.fillText('E is normal to the sheet · cap flux is nonzero · curved-side flux is zero',x,y);ctx.restore();
+  }
+  function draw() {
+    if(!ctx||!width||!height)return;
+    ctx.clearRect(0,0,width,height);drawBackground();drawSheet();drawFieldLines();drawGaussianPillbox();drawSheetMarkers();drawNormalVectors();drawAnnotations();
+  }
+  function setPolarity(isPositive) {
+    positive=isPositive;positiveBtn.classList.toggle('active',positive);negativeBtn.classList.toggle('active',!positive);
+    positiveBtn.setAttribute('aria-pressed',String(positive));negativeBtn.setAttribute('aria-pressed',String(!positive));
+    modeCaption.innerHTML=`Pillbox radius r = ${radius.toFixed(2)} · sheet density σ ${positive?'&gt; 0':'&lt; 0'}`;draw();
+  }
+  function resetView() { yaw=-0.62;pitch=0.24;zoom=1;autoRotate=false;spinBtn.textContent='▶ Auto-rotate';draw(); }
+  [fieldToggle,gaussToggle,normalToggle,chargeToggle,capsToggle].forEach(el=>el.addEventListener('change',draw));
+  positiveBtn.addEventListener('click',()=>setPolarity(true));negativeBtn.addEventListener('click',()=>setPolarity(false));
+  document.getElementById('resetBtn').addEventListener('click',resetView);
+  document.getElementById('zoomInBtn').addEventListener('click',()=>{zoom=Math.min(1.55,zoom*1.12);draw();});
+  document.getElementById('zoomOutBtn').addEventListener('click',()=>{zoom=Math.max(.62,zoom/1.12);draw();});
+  spinBtn.addEventListener('click',()=>{autoRotate=!autoRotate;spinBtn.textContent=autoRotate?'Ⅱ Pause rotation':'▶ Auto-rotate';});
+  canvas.addEventListener('pointerdown',e=>{dragging=true;lastX=e.clientX;lastY=e.clientY;canvas.setPointerCapture(e.pointerId);});
+  canvas.addEventListener('pointermove',e=>{if(!dragging)return;const dx=e.clientX-lastX,dy=e.clientY-lastY;lastX=e.clientX;lastY=e.clientY;yaw+=dx*.009;pitch=Math.max(-1.3,Math.min(1.3,pitch+dy*.008));draw();});
+  function stopDrag(){dragging=false;}
+  canvas.addEventListener('pointerup',stopDrag);canvas.addEventListener('pointercancel',stopDrag);
+  canvas.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.62,Math.min(1.55,zoom*(e.deltaY<0?1.08:.925)));draw();},{passive:false});
+  canvas.addEventListener('dblclick',resetView);
+  window.addEventListener('resize',resize);
+  let lastFrame=0;function animate(t){if(autoRotate&&!dragging){const dt=lastFrame?Math.min(40,t-lastFrame):16;yaw+=dt*.00035;draw();}lastFrame=t;requestAnimationFrame(animate);}
+  resize();requestAnimationFrame(animate);
+})();
+</script>
+</body>
+</html>
